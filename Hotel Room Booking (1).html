@@ -1,0 +1,445 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Hotel Room Booking</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: a front-desk board. Header with live counts, two views (Rooms grid, Bookings ledger), and a slide-in panel for booking and modifying a stay. */
+:root {
+  --bg: #f1f4f6;
+  --surface: #ffffff;
+  --surface-2: #e9eef1;
+  --fg: #14202b;
+  --muted: #566877;
+  --line: #d6dee4;
+  --accent: #0e6a62;
+  --accent-fg: #ffffff;
+  --lux: #7d5f14;
+  --lux-bg: #f2e8cc;
+  --ok: #1d724a;
+  --ok-bg: #dcf1e5;
+  --busy: #9b3427;
+  --busy-bg: #f7e0dc;
+  --overlay: rgba(10, 20, 28, 0.45);
+  --font-display: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d151b;
+    --surface: #15202a;
+    --surface-2: #1d2b36;
+    --fg: #e5edf1;
+    --muted: #9aabb6;
+    --line: #28373f;
+    --accent: #4fc4b6;
+    --accent-fg: #06211d;
+    --lux: #e2c677;
+    --lux-bg: #30280f;
+    --ok: #72d6a3;
+    --ok-bg: #12301f;
+    --busy: #f1978d;
+    --busy-bg: #381a19;
+    --overlay: rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d151b;
+  --surface: #15202a;
+  --surface-2: #1d2b36;
+  --fg: #e5edf1;
+  --muted: #9aabb6;
+  --line: #28373f;
+  --accent: #4fc4b6;
+  --accent-fg: #06211d;
+  --lux: #e2c677;
+  --lux-bg: #30280f;
+  --ok: #72d6a3;
+  --ok-bg: #12301f;
+  --busy: #f1978d;
+  --busy-bg: #381a19;
+  --overlay: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; align-items: flex-end; }
+header h1 { font-size: 30px; line-height: 1.1; }
+.rates { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+.counts { display: flex; gap: 20px; font-variant-numeric: tabular-nums; }
+.counts div { display: flex; flex-direction: column; }
+.counts b { font-family: var(--font-display); font-size: 20px; font-weight: 600; }
+.counts span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.note { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 14px; color: var(--muted); }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; color: var(--muted); font-weight: 500; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: 13px; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.room-no { font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 1; }
+.tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; margin-top: 6px; }
+.tag.lux { background: var(--lux-bg); color: var(--lux); }
+.tag.std { background: var(--surface-2); color: var(--muted); }
+.pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.busy { background: var(--busy-bg); color: var(--busy); }
+.price { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.stay { border-top: 1px dashed var(--line); padding-top: 10px; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.stay dt { color: var(--muted); }
+.stay dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.card-actions { margin-top: auto; display: flex; gap: 8px; }
+
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 14px; font-weight: 500; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { color: var(--busy); border-color: var(--busy); }
+.btn.danger.solid { background: var(--busy); color: var(--surface); }
+.btn.sm { padding: 5px 10px; font-size: 13px; }
+.card-actions .btn { flex: 1; }
+
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: 13px; font-weight: 500; color: var(--muted); }
+.input { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; width: 100%; min-width: 0; }
+.input:focus { border-color: var(--accent); }
+
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; }
+.empty { padding: 32px 16px; text-align: center; color: var(--muted); }
+
+.overlay { position: fixed; inset: 0; background: var(--overlay); z-index: 20; }
+.panel {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 21; width: min(440px, 100%);
+  background: var(--surface); border-left: 1px solid var(--line);
+  padding: max(20px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) 20px;
+  overflow-y: auto; display: flex; flex-direction: column; gap: 18px;
+}
+.panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.panel-head h2 { font-size: 22px; }
+.panel-head p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.x { background: none; border: 0; font-size: 24px; line-height: 1; padding: 4px 8px; color: var(--muted); }
+.section { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 16px; }
+.section h3 { font-size: 15px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.row .field { flex: 1 1 120px; }
+.bill { display: flex; justify-content: space-between; align-items: baseline; background: var(--surface-2); border-radius: 8px; padding: 12px 14px; font-variant-numeric: tabular-nums; }
+.bill b { font-family: var(--font-display); font-size: 22px; }
+.err { color: var(--busy); font-size: 13px; min-height: 18px; margin: 0; }
+.confirm { background: var(--busy-bg); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 30;
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  background: var(--fg); color: var(--bg); border-radius: 8px; padding: 10px 16px; font-size: 14px;
+  max-width: calc(100% - 32px); box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .panel { animation: slide 0.18s ease-out; }
+  @keyframes slide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+}
+@media (max-width: 520px) {
+  header h1 { font-size: 26px; }
+  .panel { border-left: 0; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Hotel Room Booking</h1>
+      <p class="rates">Rooms 101 to 103 Non-Luxury at Rs.1,000 a day. Rooms 104 to 106 Luxury at Rs.2,500 a day.</p>
+    </div>
+    <div class="counts" id="counts" aria-label="Room summary"></div>
+  </header>
+
+  <div class="note" id="sample-note" hidden>Rooms 102 and 105 hold sample bookings so you can try Modify and Cancel. Remove them whenever you like.</div>
+
+  <div>
+    <div class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" role="tab" id="tab-rooms" data-action="tab" data-tab="rooms" aria-selected="true">Rooms</button>
+      <button class="tab" role="tab" id="tab-bookings" data-action="tab" data-tab="bookings" aria-selected="false">Bookings</button>
+    </div>
+  </div>
+
+  <section id="view-rooms" aria-labelledby="tab-rooms">
+    <div class="toolbar" style="margin-bottom:14px">
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section id="view-bookings" aria-labelledby="tab-bookings" hidden>
+    <div class="toolbar" style="margin-bottom:14px">
+      <div class="field" style="flex:1 1 240px;max-width:360px">
+        <label for="search">Search by room number or customer</label>
+        <input class="input" id="search" type="search" placeholder="e.g. 102 or Priya" autocomplete="off">
+      </div>
+    </div>
+    <div class="table-wrap" id="ledger"></div>
+  </section>
+</div>
+
+<div id="overlay" class="overlay" data-action="close" hidden></div>
+<aside id="panel" class="panel" role="dialog" aria-modal="true" aria-label="Booking details" hidden></aside>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  var KEY = "hotel-room-booking-v1";
+  var rooms = [
+    { n: 101, type: "Non-Luxury", price: 1000 },
+    { n: 102, type: "Non-Luxury", price: 1000 },
+    { n: 103, type: "Non-Luxury", price: 1000 },
+    { n: 104, type: "Luxury", price: 2500 },
+    { n: 105, type: "Luxury", price: 2500 },
+    { n: 106, type: "Luxury", price: 2500 }
+  ].map(function (r) { r.booked = false; r.name = ""; r.phone = ""; r.days = 0; r.sample = false; return r; });
+
+  var state = { tab: "rooms", filter: "all", panel: null, confirmCancel: false, query: "" };
+  var toastTimer = null;
+
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(rooms)); } catch (e) {} }
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (Array.isArray(s) && s.length === rooms.length) {
+        s.forEach(function (x, i) {
+          if (x && x.n === rooms[i].n) {
+            rooms[i].booked = !!x.booked;
+            rooms[i].name = String(x.name || "");
+            rooms[i].phone = String(x.phone || "");
+            rooms[i].days = Number(x.days) || 0;
+            rooms[i].sample = !!x.sample;
+          }
+        });
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+  if (!load()) {
+    rooms[1].booked = true; rooms[1].name = "Priya Deshmukh"; rooms[1].phone = "98220 11234"; rooms[1].days = 2; rooms[1].sample = true;
+    rooms[4].booked = true; rooms[4].name = "Rahul Patil"; rooms[4].phone = "98900 45678"; rooms[4].days = 3; rooms[4].sample = true;
+  }
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function money(n) { return "Rs." + Number(n).toLocaleString("en-IN"); }
+  function find(n) { for (var i = 0; i < rooms.length; i++) if (rooms[i].n === n) return rooms[i]; return null; }
+  function bill(r) { return r.price * r.days; }
+  function toInt(v) { var s = String(v).trim(); return /^-?\d+$/.test(s) ? parseInt(s, 10) : NaN; }
+
+  function toast(msg) {
+    var t = $("toast");
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 3200);
+  }
+
+  /* ---------- actions (same rules as the Java program) ---------- */
+  function bookRoom(r, name, phone, days) {
+    if (r.booked) return "Sorry, this room is already booked.";
+    if (!name.trim() || !phone.trim() || isNaN(days) || days <= 0) return "Enter a name, a phone number and at least 1 day.";
+    r.name = name.trim(); r.phone = phone.trim(); r.days = days; r.booked = true; r.sample = false;
+    return "";
+  }
+  function cancelBooking(r) { r.name = ""; r.phone = ""; r.days = 0; r.booked = false; r.sample = false; }
+  function increaseDays(r, extra) {
+    if (isNaN(extra) || extra <= 0) return "Enter a number of days (1 or more).";
+    r.days += extra; r.sample = false; return "";
+  }
+  function decreaseDays(r, less) {
+    if (isNaN(less) || less <= 0) return "Enter a number of days (1 or more).";
+    if (less >= r.days) return "This booking has " + r.days + " day" + (r.days === 1 ? "" : "s") + ". At least 1 day must remain. To remove the booking, use Cancel booking.";
+    r.days -= less; r.sample = false; return "";
+  }
+
+  /* ---------- rendering ---------- */
+  function renderCounts() {
+    var booked = rooms.filter(function (r) { return r.booked; });
+    var total = booked.reduce(function (s, r) { return s + bill(r); }, 0);
+    $("counts").innerHTML =
+      "<div><b>" + (rooms.length - booked.length) + "</b><span>Available</span></div>" +
+      "<div><b>" + booked.length + "</b><span>Booked</span></div>" +
+      "<div><b>" + money(total) + "</b><span>Billed</span></div>";
+    $("sample-note").hidden = !rooms.some(function (r) { return r.sample; });
+  }
+
+  function renderChips() {
+    var opts = [["all", "All rooms"], ["available", "Available"], ["booked", "Booked"], ["Luxury", "Luxury"], ["Non-Luxury", "Non-Luxury"]];
+    $("chips").innerHTML = opts.map(function (o) {
+      return '<button class="chip" data-action="filter" data-filter="' + o[0] + '" aria-pressed="' + (state.filter === o[0]) + '">' + o[1] + "</button>";
+    }).join("");
+  }
+
+  function passes(r) {
+    var f = state.filter;
+    if (f === "all") return true;
+    if (f === "available") return !r.booked;
+    if (f === "booked") return r.booked;
+    return r.type === f;
+  }
+
+  function renderGrid() {
+    var list = rooms.filter(passes);
+    if (!list.length) { $("grid").innerHTML = '<div class="empty" style="grid-column:1/-1">No rooms match this filter.</div>'; return; }
+    $("grid").innerHTML = list.map(function (r) {
+      var stay = r.booked
+        ? '<dl class="stay"><dt>Customer</dt><dd>' + esc(r.name) + "</dd><dt>Phone</dt><dd>" + esc(r.phone) + "</dd><dt>Days</dt><dd>" + r.days + "</dd><dt>Total bill</dt><dd><b>" + money(bill(r)) + "</b></dd></dl>"
+        : "";
+      var actions = r.booked
+        ? '<button class="btn primary" data-action="manage" data-room="' + r.n + '">Modify booking</button>'
+        : '<button class="btn primary" data-action="book" data-room="' + r.n + '">Book this room</button>';
+      return '<article class="card">' +
+        '<div class="card-top"><div><div class="room-no">' + r.n + '</div><span class="tag ' + (r.type === "Luxury" ? "lux" : "std") + '">' + r.type + "</span></div>" +
+        '<span class="pill ' + (r.booked ? "busy" : "ok") + '">' + (r.booked ? "Booked" : "Available") + "</span></div>" +
+        '<div class="price">' + money(r.price) + " per day</div>" + stay +
+        '<div class="card-actions">' + actions + "</div></article>";
+    }).join("");
+  }
+
+  function renderLedger() {
+    var q = state.query.trim().toLowerCase();
+    var list = rooms.filter(function (r) {
+      return r.booked && (!q || String(r.n).indexOf(q) !== -1 || r.name.toLowerCase().indexOf(q) !== -1);
+    });
+    if (!list.length) {
+      $("ledger").innerHTML = '<div class="empty">' + (q ? "No booking matches “" + esc(state.query) + "”." : "No rooms are booked right now.") + "</div>";
+      return;
+    }
+    $("ledger").innerHTML = "<table><thead><tr><th>Room</th><th>Type</th><th>Customer</th><th>Phone</th><th class=\"num\">Days</th><th class=\"num\">Total bill</th><th></th></tr></thead><tbody>" +
+      list.map(function (r) {
+        return "<tr><td><b>" + r.n + "</b></td><td>" + r.type + "</td><td>" + esc(r.name) + "</td><td>" + esc(r.phone) + '</td><td class="num">' + r.days + '</td><td class="num">' + money(bill(r)) +
+          '</td><td><button class="btn sm" data-action="manage" data-room="' + r.n + '">Modify</button></td></tr>';
+      }).join("") + "</tbody></table>";
+  }
+
+  function renderPanel() {
+    var p = state.panel, el = $("panel");
+    if (!p) { el.hidden = true; $("overlay").hidden = true; return; }
+    var r = find(p.room);
+    $("overlay").hidden = false; el.hidden = false;
+
+    if (p.mode === "book") {
+      el.innerHTML =
+        '<div class="panel-head"><div><h2>Book room ' + r.n + "</h2><p>" + r.type + ", " + money(r.price) + ' per day</p></div><button class="x" data-action="close" aria-label="Close">&times;</button></div>' +
+        '<form id="book-form" class="section" style="border-top:0;padding-top:0" novalidate>' +
+        '<div class="field"><label for="f-name">Customer name</label><input class="input" id="f-name" autocomplete="off"></div>' +
+        '<div class="field"><label for="f-phone">Phone number</label><input class="input" id="f-phone" inputmode="tel" autocomplete="off"></div>' +
+        '<div class="field"><label for="f-days">Number of days</label><input class="input" id="f-days" type="number" min="1" step="1" value="1"></div>' +
+        '<div class="bill"><span>Total bill</span><b id="f-bill">' + money(r.price) + "</b></div>" +
+        '<p class="err" id="f-err"></p>' +
+        '<button class="btn primary" type="submit">Confirm booking</button></form>';
+      var d = $("f-days");
+      d.addEventListener("input", function () { var n = toInt(d.value); $("f-bill").textContent = money(!isNaN(n) && n > 0 ? n * r.price : 0); });
+      $("book-form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var err = bookRoom(r, $("f-name").value, $("f-phone").value, toInt($("f-days").value));
+        if (err) { $("f-err").textContent = err; return; }
+        save(); closePanel(); render();
+        toast("Room " + r.n + " booked. Total bill " + money(bill(r)) + ".");
+      });
+      $("f-name").focus();
+      return;
+    }
+
+    /* manage */
+    el.innerHTML =
+      '<div class="panel-head"><div><h2>Modify room ' + r.n + "</h2><p>" + r.type + ", " + money(r.price) + ' per day</p></div><button class="x" data-action="close" aria-label="Close">&times;</button></div>' +
+      '<div class="bill"><span>' + r.days + " day" + (r.days === 1 ? "" : "s") + " &middot; " + esc(r.name) + "</span><b>" + money(bill(r)) + "</b></div>" +
+      '<div class="section"><h3>Change length of stay</h3>' +
+        '<div class="row"><div class="field"><label for="m-days">Days to add or remove</label><input class="input" id="m-days" type="number" min="1" step="1" value="1"></div>' +
+        '<button class="btn primary" data-action="inc">Add days</button><button class="btn" data-action="dec">Remove days</button></div>' +
+        '<p class="err" id="m-day-err"></p></div>' +
+      '<form class="section" id="m-form" novalidate><h3>Update customer details</h3>' +
+        '<div class="field"><label for="m-name">Customer name</label><input class="input" id="m-name" value="' + esc(r.name) + '" autocomplete="off"></div>' +
+        '<div class="field"><label for="m-phone">Phone number</label><input class="input" id="m-phone" value="' + esc(r.phone) + '" inputmode="tel" autocomplete="off"></div>' +
+        '<p class="err" id="m-err"></p><button class="btn primary" type="submit">Save details</button></form>' +
+      '<div class="section"><h3>Cancel booking</h3>' +
+        (state.confirmCancel
+          ? '<div class="confirm"><span>Cancel the booking for ' + esc(r.name) + " in room " + r.n + "? This frees the room.</span><div class=\"row\"><button class=\"btn danger solid\" data-action=\"cancel-yes\">Yes, cancel booking</button><button class=\"btn\" data-action=\"cancel-no\">Keep booking</button></div></div>"
+          : '<button class="btn danger" data-action="cancel-ask">Cancel booking</button>') + "</div>";
+    $("m-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var nm = $("m-name").value.trim(), ph = $("m-phone").value.trim();
+      if (!nm) { $("m-err").textContent = "Name cannot be empty."; return; }
+      if (!ph) { $("m-err").textContent = "Phone number cannot be empty."; return; }
+      r.name = nm; r.phone = ph; r.sample = false;
+      save(); render(); toast("Customer details updated.");
+    });
+  }
+
+  function render() { renderCounts(); renderChips(); renderGrid(); renderLedger(); renderPanel(); }
+
+  function openPanel(mode, n) { state.panel = { mode: mode, room: n }; state.confirmCancel = false; renderPanel(); }
+  function closePanel() { state.panel = null; state.confirmCancel = false; renderPanel(); }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-action]");
+    if (!t) return;
+    var a = t.getAttribute("data-action");
+    var n = parseInt(t.getAttribute("data-room"), 10);
+    var r = state.panel ? find(state.panel.room) : null;
+
+    if (a === "tab") {
+      state.tab = t.getAttribute("data-tab");
+      ["rooms", "bookings"].forEach(function (k) {
+        $("view-" + k).hidden = state.tab !== k;
+        $("tab-" + k).setAttribute("aria-selected", String(state.tab === k));
+      });
+    } else if (a === "filter") { state.filter = t.getAttribute("data-filter"); renderChips(); renderGrid(); }
+    else if (a === "book") openPanel("book", n);
+    else if (a === "manage") openPanel("manage", n);
+    else if (a === "close") closePanel();
+    else if (a === "inc" && r) {
+      var err = increaseDays(r, toInt($("m-days").value));
+      if (err) { $("m-day-err").textContent = err; return; }
+      save(); render(); toast("Stay extended to " + r.days + " days. New bill " + money(bill(r)) + ".");
+    } else if (a === "dec" && r) {
+      var err2 = decreaseDays(r, toInt($("m-days").value));
+      if (err2) { $("m-day-err").textContent = err2; return; }
+      save(); render(); toast("Stay shortened to " + r.days + " days. New bill " + money(bill(r)) + ".");
+    } else if (a === "cancel-ask") { state.confirmCancel = true; renderPanel(); }
+    else if (a === "cancel-no") { state.confirmCancel = false; renderPanel(); }
+    else if (a === "cancel-yes" && r) {
+      cancelBooking(r); save(); closePanel(); render(); toast("Booking for room " + r.n + " cancelled.");
+    }
+  });
+
+  $("search").addEventListener("input", function (e) { state.query = e.target.value; renderLedger(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && state.panel) closePanel(); });
+
+  render();
+})();
+</script>
+
+</body></html>
